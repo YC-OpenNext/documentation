@@ -366,11 +366,10 @@ yc ydb database create --name my-app-db --serverless</code></pre>
           <pre><code class="language-hcl">module "nextjs_app" {
   source = "github.com/yc-opennext/yc-opennext//terraform/modules/nextjs_yc"
 
-  app_name      = "my-vercel-app"
-  env           = "production"
-  cloud_id      = var.cloud_id
-  folder_id     = var.folder_id
-  domain_name   = "app.example.com"
+  app_name       = "my-vercel-app"
+  env            = "production"
+  domain_name    = "app.example.com"
+  nodejs_version = 22
 
   # Match Vercel function configuration
   function_memory = {
@@ -424,7 +423,7 @@ yc-opennext upload \
 # Deploy infrastructure
 cd terraform
 terraform init
-terraform apply -var="build_id=v1"</code></pre>
+terraform apply</code></pre>
 
           <h3>Verify Deployment</h3>
 
@@ -493,9 +492,7 @@ jobs:
         run: |
           cd terraform
           terraform init
-          terraform apply \
-            -var="build_id=${{ github.sha }}" \
-            -auto-approve</code></pre>
+          terraform apply -auto-approve</code></pre>
 
           <h2>Feature-Specific Migration</h2>
 
@@ -568,7 +565,7 @@ import { GoogleAnalytics } from '@next/third-parties/google';</code></pre>
 
           <pre><code class="language-bash"># Deploy preview
 terraform workspace new preview
-terraform apply -var="env=preview" -var="build_id=pr-123"</code></pre>
+terraform apply -var="env=preview"</code></pre>
 
           <h3>Issue 4: Cron Jobs</h3>
 

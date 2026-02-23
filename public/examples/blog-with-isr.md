@@ -424,13 +424,11 @@ yc-opennext upload \
 module "blog" {
   source = "github.com/yc-opennext/yc-opennext//terraform/modules/nextjs_yc"
 
-  app_name    = "my-blog"
-  env         = "production"
-  cloud_id    = var.cloud_id
-  folder_id   = var.folder_id
-  domain_name = "blog.example.com"
-  build_id    = "v1"
-  manifest_path = "./yc-build/deploy.manifest.json"
+  app_name       = "my-blog"
+  env            = "production"
+  domain_name    = "blog.example.com"
+  manifest_path  = "./yc-build/deploy.manifest.json"
+  nodejs_version = 22
 
   # Enable ISR with YDB
   enable_isr = true

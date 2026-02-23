@@ -206,43 +206,44 @@ yc-opennext upload \
   --verbose</code></pre>
 
                 <h3>6. Configure Terraform</h3>
-                <p>Create <code>terraform.tfvars</code>:</p>
+                <p>Edit <code>main.tf</code> to set your domain and adjust parameters:</p>
 
-                <pre><code class="language-hcl"># terraform.tfvars
-cloud_id    = "b1g8..."
-folder_id   = "b1g9..."
-domain_name = "app.example.com"
+                <pre><code class="language-hcl">module "nextjs" {
+  source = "github.com/YC-OpenNext/terraform-yandex-nextjs//modules/nextjs_yc?ref=v1.0.0"
 
-app_name      = "my-nextjs-app"
-env           = "production"
-build_id      = "v1"
-manifest_path = "../build/deploy.manifest.json"
+  app_name       = "my-nextjs-app"
+  env            = "production"
+  domain_name    = "app.example.com"
+  manifest_path  = "../build/deploy.manifest.json"
+  build_dir      = "../build"
+  nodejs_version = 22
 
-enable_isr = true
-enable_cdn = true
+  enable_isr = true
+  enable_cdn = true
 
-function_memory = {
-  server = 1024
-  image  = 512
-}
+  function_memory = {
+    server = 1024
+    image  = 512
+  }
 
-prepared_instances = {
-  server = 1
-  image  = 0
+  prepared_instances = {
+    server = 1
+    image  = 0
+  }
 }</code></pre>
 
                 <h3>7. Initialize Terraform</h3>
 
-                <pre><code class="language-bash">cd terraform/envs/prod
+                <pre><code class="language-bash">cd terraform
 
 # Initialize providers
 terraform init
 
 # Review plan
-terraform plan -var-file=terraform.tfvars
+terraform plan
 
 # Apply configuration
-terraform apply -var-file=terraform.tfvars</code></pre>
+terraform apply</code></pre>
 
                 <h3>8. Configure DNS</h3>
                 <p>After Terraform completes:</p>
@@ -269,34 +270,57 @@ yc monitoring dashboard get --name my-app-dashboard</code></pre>
                 <h2>Deployment Patterns</h2>
 
                 <h3>Development Environment</h3>
-                <p>Fast iteration with minimal resources:</p>
+                <p>Fast iteration with minimal resources. In <code>main.tf</code>:</p>
+
+                <pre><code class="language-hcl">env        = "dev"
+enable_cdn = false
+
+prepared_instances = {
+  server = 0
+  image  = 0
+}</code></pre>
 
                 <pre><code class="language-bash"># Quick deploy for dev
 yc-opennext build --project . --output ./build --skip-build
-
-terraform apply -var="env=dev" \
-  -var="prepared_instances.server=0" \
-  -var="enable_cdn=false"</code></pre>
+terraform apply</code></pre>
 
                 <h3>Production Environment</h3>
-                <p>High availability with optimizations:</p>
+                <p>High availability with optimizations. In <code>main.tf</code>:</p>
+
+                <pre><code class="language-hcl">env        = "production"
+enable_cdn = true
+
+function_memory = {
+  server = 1024
+  image  = 512
+}
+
+prepared_instances = {
+  server = 2
+  image  = 0
+}
+
+cache_ttl_days = 30</code></pre>
 
                 <pre><code class="language-bash"># Production build
 NODE_ENV=production npm run build
 yc-opennext build --project . --output ./build --standalone
-
-# Deploy with production settings
-terraform apply -var-file=prod.tfvars \
-  -var="prepared_instances.server=2" \
-  -var="enable_cdn=true" \
-  -var="cache_ttl_days=30"</code></pre>
+terraform apply</code></pre>
 
                 <h3>Staging Environment</h3>
-                <p>Production-like with cost optimization:</p>
+                <p>Production-like with cost optimization. In <code>main.tf</code>:</p>
 
-                <pre><code class="language-bash">terraform apply -var="env=staging" \
-  -var="prepared_instances.server=1" \
-  -var="function_memory.server=512"</code></pre>
+                <pre><code class="language-hcl">env = "staging"
+
+function_memory = {
+  server = 512
+  image  = 256
+}
+
+prepared_instances = {
+  server = 1
+  image  = 0
+}</code></pre>
 
                 <h2>Blue-Green Deployment</h2>
 
@@ -308,13 +332,13 @@ yc-opennext build --project . --output ./build-v2 --build-id v2
 # 2. Upload new artifacts
 yc-opennext upload --build-dir ./build-v2 --bucket my-app-assets --prefix v2
 
-# 3. Deploy new version
-terraform apply -var="build_id=v2"</code></pre>
+# 3. Update manifest_path and build_dir in main.tf, then apply
+terraform apply</code></pre>
 
                 <h3>Rollback</h3>
 
-                <pre><code class="language-bash"># Simply redeploy previous version
-terraform apply -var="build_id=v1"</code></pre>
+                <pre><code class="language-bash"># Point back to previous manifest
+terraform apply -var="manifest_path=./build-v1/deploy.manifest.json"</code></pre>
 
                 <h3>Canary Deployment</h3>
                 <p>Use API Gateway weighted routing (manual setup):</p>

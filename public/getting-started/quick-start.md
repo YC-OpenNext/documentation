@@ -147,29 +147,16 @@ terraform {
   }
 }
 
-provider "yandex" {
-  cloud_id  = var.cloud_id
-  folder_id = var.folder_id
-}
+provider "yandex" {}
 
 module "nextjs_app" {
   source = "github.com/yc-opennext/yc-opennext//terraform/modules/nextjs_yc"
 
-  app_name      = "my-nextjs-app"
-  env           = "production"
-  cloud_id      = var.cloud_id
-  folder_id     = var.folder_id
-  domain_name   = "app.example.com"  # Change to your domain
-  build_id      = "v1"
-  manifest_path = "./yc-build/deploy.manifest.json"
-}
-
-variable "cloud_id" {
-  default = "YOUR_CLOUD_ID"
-}
-
-variable "folder_id" {
-  default = "YOUR_FOLDER_ID"
+  app_name       = "my-nextjs-app"
+  env            = "production"
+  domain_name    = "app.example.com"  # Change to your domain
+  manifest_path  = "./yc-build/deploy.manifest.json"
+  nodejs_version = 22
 }
 
 output "app_url" {
@@ -216,10 +203,10 @@ You've successfully deployed your Next.js application to Yandex Cloud!
 # Build and deploy a new version
 yc-opennext build --project . --output ./build-v2
 yc-opennext upload --build-dir ./build-v2 --bucket $ASSETS_BUCKET --prefix v2
-terraform apply -var="build_id=v2"
+terraform apply -var="manifest_path=./build-v2/deploy.manifest.json"
 
 # Rollback to previous version
-terraform apply -var="build_id=v1"
+terraform apply -var="manifest_path=./build-v1/deploy.manifest.json"
 
 # View function logs
 yc serverless function logs --name my-nextjs-app-production-server-function --follow
