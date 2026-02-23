@@ -234,11 +234,10 @@ Create `terraform/main.tf`:
 module "nextjs_app" {
   source = "github.com/yc-opennext/yc-opennext//terraform/modules/nextjs_yc"
 
-  app_name      = "my-vercel-app"
-  env           = "production"
-  cloud_id      = var.cloud_id
-  folder_id     = var.folder_id
-  domain_name   = "app.example.com"
+  app_name       = "my-vercel-app"
+  env            = "production"
+  domain_name    = "app.example.com"
+  nodejs_version = 22
 
   # Match Vercel function configuration
   function_memory = {
@@ -296,7 +295,7 @@ yc-opennext upload \
 # Deploy infrastructure
 cd terraform
 terraform init
-terraform apply -var="build_id=v1"
+terraform apply
 ```
 
 ### Verify Deployment
@@ -369,9 +368,7 @@ jobs:
         run: |
           cd terraform
           terraform init
-          terraform apply \
-            -var="build_id=${{ github.sha }}" \
-            -auto-approve
+          terraform apply -auto-approve
 ```
 
 ## Feature-Specific Migration
@@ -451,7 +448,7 @@ import { GoogleAnalytics } from '@next/third-parties/google';
 ```bash
 # Deploy preview
 terraform workspace new preview
-terraform apply -var="env=preview" -var="build_id=pr-123"
+terraform apply -var="env=preview"
 ```
 
 ### Issue 4: Cron Jobs
