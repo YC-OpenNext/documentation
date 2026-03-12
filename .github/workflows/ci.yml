@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Check required files exist
         run: |
           test -f public/index.html
@@ -19,3 +18,17 @@ jobs:
           test -f public/assets/docs.css
           test -f public/favicon.svg
           echo "All required files present"
+      - name: Check compatibility info is present
+        run: |
+          grep -q "full support for 13.x-16.x" public/docs.html
+          grep -q "NYC_SKIP_BUILD" public/api/cli-commands.md
+          echo "Compatibility information is present"
+      - name: Enforce one-command docs flow
+        run: |
+          grep -q "next-yc deploy --project . --verbose" public/deployment.html
+          grep -q "next-yc deploy --project . --verbose" public/getting-started/quick-start.md
+          if grep -R -nE "next-yc (bootstrap|plan|deploy-manifest)\b" public; then
+            echo "Legacy command reference found in public docs"
+            exit 1
+          fi
+          echo "One-command documentation flow is enforced"

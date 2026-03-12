@@ -1,11 +1,11 @@
 {
-  "name": "yc-next-docs",
+  "name": "next-docs-yc",
   "version": "1.0.0",
   "private": true,
-  "description": "YC-Next Documentation Site",
+  "description": "Next-YC Documentation Site",
   "scripts": {
     "serve": "npx http-server ./public -p 3001 -o"
   },
-  "author": "YC-Next Contributors",
+  "author": "Next-YC Contributors",
   "license": "MIT"
 }

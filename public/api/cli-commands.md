@@ -1,450 +1,72 @@
-# CLI Command Reference
+# CLI Commands
 
-Complete reference for all YC-Next CLI commands and options.
+## `next-yc deploy`
 
-## Global Options
-
-Options available for all commands:
-
-| Option      | Alias | Description               | Default                 |
-| ----------- | ----- | ------------------------- | ----------------------- |
-| `--help`    | `-h`  | Show help message         | -                       |
-| `--version` | `-V`  | Show version number       | -                       |
-| `--verbose` | `-v`  | Enable verbose output     | `false`                 |
-| `--quiet`   | `-q`  | Suppress non-error output | `false`                 |
-| `--config`  | `-c`  | Path to config file       | `yc-next.config.js` |
-
-## Commands
-
-### `yc-next analyze`
-
-Analyze a Next.js project to detect capabilities and check compatibility.
+Deploy Next.js application with one command.
 
 ```bash
-yc-next analyze [options]
+next-yc deploy --project . --verbose
 ```
 
-#### Options
+Executes the full pipeline: analyze, build, upload, terraform apply.
 
-| Option             | Required | Description                           | Default |
-| ------------------ | -------- | ------------------------------------- | ------- |
-| `--project <path>` | Yes      | Path to Next.js project               | -       |
-| `--output <dir>`   | No       | Output directory for analysis results | -       |
-| `--format <type>`  | No       | Output format (json, yaml, table)     | `json`  |
-| `--strict`         | No       | Fail on compatibility warnings        | `false` |
+### Key options
 
-#### Examples
+- `--project <path>` / `-p` — path to the Next.js project
+- `--output <dir>` / `-o` — output directory for build artifacts
+- `--app-name <name>` — application name for deployment
+- `--env <environment>` — deployment environment (e.g. production, staging)
+- `--region <region>` — Yandex Cloud region
+- `--assets-bucket <bucket>` — Object Storage bucket for static assets
+- `--build-id <id>` — custom build identifier
+- `--skip-build` — skip application build phase
+- `--dry-run` — preview changes without applying
+- `--verbose` — enable verbose output
+- `--auto-approve` — skip Terraform apply confirmation
+
+## `next-yc analyze`
+
+Analyze a Next.js project and report detected capabilities.
 
 ```bash
-# Basic analysis
-yc-next analyze --project ./my-app
-
-# Save analysis results
-yc-next analyze --project ./my-app --output ./analysis
-
-# Table format output
-yc-next analyze --project ./my-app --format table
-
-# Strict mode (fail on warnings)
-yc-next analyze --project ./my-app --strict
+next-yc analyze --project .
 ```
 
-#### Output
+Detected capabilities:
+- Next.js version (13.x-16.x)
+- App Router usage
+- Pages Router usage
+- API routes
+- ISR (on-demand revalidation, tags, paths)
+- Middleware (edge-emulated mode)
+- Server Actions
+- Image optimization
 
-The analyze command outputs a capabilities object:
+## `next-yc build`
 
-```json
-{
-  "nextVersion": "14.2.0",
-  "appRouter": true,
-  "pagesRouter": false,
-  "needsServer": true,
-  "needsImage": true,
-  "isr": {
-    "enabled": true,
-    "onDemand": true,
-    "tags": true,
-    "paths": true
-  },
-  "middleware": {
-    "enabled": true,
-    "mode": "edge-emulated"
-  },
-  "notes": ["Middleware will run in edge-emulated mode"]
-}
-```
-
----
-
-### `yc-next build`
-
-Build and package a Next.js application for Yandex Cloud deployment.
+Build and package a Next.js project for Yandex Cloud deployment.
 
 ```bash
-yc-next build [options]
+next-yc build --project .
 ```
 
-#### Options
-
-| Option             | Required | Description                          | Default        |
-| ------------------ | -------- | ------------------------------------ | -------------- |
-| `--project <path>` | Yes      | Path to Next.js project              | -              |
-| `--output <dir>`   | Yes      | Output directory for build artifacts | -              |
-| `--build-id <id>`  | No       | Custom build identifier              | Auto-generated |
-| `--standalone`     | No       | Build in standalone mode             | `false`        |
-| `--skip-build`     | No       | Skip Next.js build step              | `false`        |
-| `--minify`         | No       | Minify function code                 | `true`         |
-| `--split-chunks`   | No       | Split large functions                | `false`        |
-
-#### Examples
-
-```bash
-# Basic build
-yc-next build --project ./my-app --output ./build
-
-# Standalone mode (recommended)
-yc-next build --project ./my-app --output ./build --standalone
-
-# Custom build ID
-yc-next build --project ./my-app --output ./build --build-id v1.2.3
-
-# Skip Next.js build (use existing .next)
-yc-next build --project ./my-app --output ./build --skip-build
-```
-
-#### Output Structure
-
-```
-build/
-├── artifacts/
-│   ├── server.zip       # Server function package
-│   ├── image.zip        # Image optimizer package
-│   └── assets/          # Static files
-│       ├── _next/static/
-│       └── public/
-├── deploy.manifest.json # Deployment configuration
-├── capabilities.json    # Detected capabilities
-└── openapi-template.json # API Gateway spec
-```
-
----
-
-### `yc-next upload`
+## `next-yc upload`
 
 Upload build artifacts to Yandex Cloud Object Storage.
 
 ```bash
-yc-next upload [options]
+next-yc upload --project .
 ```
 
-#### Options
-
-| Option                  | Required | Description                          | Default                           |
-| ----------------------- | -------- | ------------------------------------ | --------------------------------- |
-| `--build-dir <dir>`     | Yes      | Directory containing build artifacts | -                                 |
-| `--bucket <name>`       | Yes      | S3 bucket for assets                 | -                                 |
-| `--prefix <prefix>`     | Yes      | S3 key prefix (build ID)             | -                                 |
-| `--cache-bucket <name>` | No       | S3 bucket for ISR cache              | -                                 |
-| `--region <region>`     | No       | Yandex Cloud region                  | `ru-central1`                     |
-| `--endpoint <url>`      | No       | S3 endpoint URL                      | `https://storage.yandexcloud.net` |
-| `--parallel <n>`        | No       | Number of parallel uploads           | `4`                               |
-| `--dry-run`             | No       | Show what would be uploaded          | `false`                           |
-| `--ignore <pattern>`    | No       | Files to ignore (glob pattern)       | -                                 |
-
-#### Examples
-
-```bash
-# Basic upload
-yc-next upload \
-  --build-dir ./build \
-  --bucket my-app-assets \
-  --prefix v1
-
-# With cache bucket
-yc-next upload \
-  --build-dir ./build \
-  --bucket my-app-assets \
-  --cache-bucket my-app-cache \
-  --prefix v1
-
-# Dry run to preview
-yc-next upload \
-  --build-dir ./build \
-  --bucket my-app-assets \
-  --prefix v1 \
-  --dry-run
-
-# Parallel uploads
-yc-next upload \
-  --build-dir ./build \
-  --bucket my-app-assets \
-  --prefix v1 \
-  --parallel 10
-```
-
-#### Environment Variables
-
-The upload command requires AWS-compatible credentials:
-
-```bash
-export AWS_ACCESS_KEY_ID=your_access_key
-export AWS_SECRET_ACCESS_KEY=your_secret_key
-```
-
----
-
-### `yc-next deploy-manifest`
-
-Generate or update a deployment manifest from build artifacts.
-
-```bash
-yc-next deploy-manifest [options]
-```
-
-#### Options
-
-| Option              | Required | Description                | Default |
-| ------------------- | -------- | -------------------------- | ------- |
-| `--build-dir <dir>` | Yes      | Build artifacts directory  | -       |
-| `--out <path>`      | Yes      | Output manifest path       | -       |
-| `--merge <path>`    | No       | Existing manifest to merge | -       |
-| `--override <json>` | No       | JSON string with overrides | -       |
-
-#### Examples
-
-```bash
-# Generate manifest
-yc-next deploy-manifest \
-  --build-dir ./build \
-  --out ./deploy.manifest.json
-
-# Merge with existing
-yc-next deploy-manifest \
-  --build-dir ./build \
-  --out ./deploy.manifest.json \
-  --merge ./previous.manifest.json
-
-# Override values
-yc-next deploy-manifest \
-  --build-dir ./build \
-  --out ./deploy.manifest.json \
-  --override '{"deployment":{"region":"ru-central1-b"}}'
-```
-
----
-
-### `yc-next plan`
-
-Preview deployment without executing (shows what would be deployed).
-
-```bash
-yc-next plan [options]
-```
-
-#### Options
-
-| Option                | Required | Description                   | Default |
-| --------------------- | -------- | ----------------------------- | ------- |
-| `--project <path>`    | Yes      | Path to Next.js project       | -       |
-| `--compare <version>` | No       | Compare with previous version | -       |
-| `--cost-estimate`     | No       | Show cost estimation          | `false` |
-
-#### Examples
-
-```bash
-# Basic plan
-yc-next plan --project ./my-app
-
-# Compare with previous
-yc-next plan --project ./my-app --compare v1
-
-# With cost estimation
-yc-next plan --project ./my-app --cost-estimate
-```
-
----
-
-### `yc-next validate`
-
-Validate configuration and deployment readiness.
-
-```bash
-yc-next validate [options]
-```
-
-#### Options
-
-| Option              | Required | Description                            | Default                |
-| ------------------- | -------- | -------------------------------------- | ---------------------- |
-| `--manifest <path>` | No       | Manifest file to validate              | `deploy.manifest.json` |
-| `--terraform <dir>` | No       | Terraform configuration to validate    | -                      |
-| `--bucket <name>`   | No       | Verify bucket exists and is accessible | -                      |
-
-#### Examples
-
-```bash
-# Validate manifest
-yc-next validate --manifest ./deploy.manifest.json
-
-# Validate Terraform
-yc-next validate --terraform ./terraform
-
-# Validate bucket access
-yc-next validate --bucket my-app-assets
-```
-
----
-
-### `yc-next rollback`
-
-Rollback to a previous deployment version.
-
-```bash
-yc-next rollback [options]
-```
-
-#### Options
-
-| Option                  | Required | Description            | Default       |
-| ----------------------- | -------- | ---------------------- | ------------- |
-| `--to <version>`        | Yes      | Version to rollback to | -             |
-| `--terraform-dir <dir>` | No       | Terraform directory    | `./terraform` |
-| `--auto-approve`        | No       | Skip confirmation      | `false`       |
-
-#### Examples
-
-```bash
-# Rollback to specific version
-yc-next rollback --to v1.2.2
-
-# Auto-approve rollback
-yc-next rollback --to v1.2.2 --auto-approve
-```
-
----
-
-### `yc-next logs`
-
-View function logs and metrics.
-
-```bash
-yc-next logs [options]
-```
-
-#### Options
-
-| Option               | Required | Description               | Default       |
-| -------------------- | -------- | ------------------------- | ------------- |
-| `--function <name>`  | No       | Function name             | All functions |
-| `--tail`             | No       | Follow log output         | `false`       |
-| `--since <time>`     | No       | Show logs since timestamp | `1h`          |
-| `--filter <pattern>` | No       | Filter log entries        | -             |
-
-#### Examples
-
-```bash
-# View all logs
-yc-next logs
-
-# Follow specific function
-yc-next logs --function server --tail
-
-# Logs from last 30 minutes
-yc-next logs --since 30m
-
-# Filter errors
-yc-next logs --filter ERROR
-```
-
----
-
-## Configuration File
-
-You can create a `yc-next.config.js` file to set default options:
-
-```javascript
-module.exports = {
-  // Default project path
-  project: '.',
-
-  // Build defaults
-  build: {
-    output: './yc-build',
-    standalone: true,
-    minify: true,
-  },
-
-  // Upload defaults
-  upload: {
-    region: 'ru-central1',
-    endpoint: 'https://storage.yandexcloud.net',
-    parallel: 4,
-  },
-
-  // Function configuration
-  functions: {
-    server: {
-      memory: 1024,
-      timeout: 30,
-    },
-    image: {
-      memory: 512,
-      timeout: 30,
-    },
-  },
-
-  // Custom environment variables
-  env: {
-    DEBUG: 'yc-next:*',
-  },
-};
-```
-
-## Exit Codes
-
-| Code | Description          |
-| ---- | -------------------- |
-| `0`  | Success              |
-| `1`  | General error        |
-| `2`  | Invalid arguments    |
-| `3`  | Build failed         |
-| `4`  | Upload failed        |
-| `5`  | Validation failed    |
-| `6`  | Compatibility error  |
-| `7`  | Authentication error |
-
-## Debugging
-
-Enable debug output with environment variable:
-
-```bash
-DEBUG=yc-next:* yc-next build --project .
-```
-
-Debug specific components:
-
-```bash
-# Debug analyzer only
-DEBUG=yc-next:analyzer yc-next analyze --project .
-
-# Debug builder only
-DEBUG=yc-next:builder yc-next build --project .
-
-# Debug uploader only
-DEBUG=yc-next:uploader yc-next upload --build-dir .
-```
-
-## Shell Completion
-
-Enable tab completion for your shell:
-
-```bash
-# Bash
-yc-next completion bash > /etc/bash_completion.d/yc-next
-
-# Zsh
-yc-next completion zsh > "${fpath[1]}/_yc-next"
-
-# Fish
-yc-next completion fish > ~/.config/fish/completions/yc-next.fish
-```
+## Environment variables
+
+- `NYC_PROJECT` — path to project directory
+- `NYC_OUTPUT` — output directory for build artifacts
+- `NYC_REGION` — Yandex Cloud region
+- `NYC_BUCKET` — Object Storage bucket name
+- `NYC_APP_NAME` — application name
+- `NYC_ENV` — deployment environment
+- `NYC_ENV_*` — server environment values (e.g. `NYC_ENV_LOG_LEVEL=info`)
+- `NYC_TF_VAR_*` — Terraform variable passthrough (e.g. `NYC_TF_VAR_memory_mb=512`)
+- `NYC_SKIP_BUILD` — skip application build phase when set to `1`
+- `NYC_VERBOSE` — enable verbose output when set to `1`
